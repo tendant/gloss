@@ -3,7 +3,7 @@
   :license {:name "Eclipse Public License - v 1.0"
             :url "http://www.eclipse.org/legal/epl-v10.html"
             :distribution :repo}
-  :dependencies [[lamina "0.5.0"]
+  :dependencies [; [lamina "0.5.0"]
                  [potemkin "0.3.2"]]
   :aliases {"all" ["with-profile" "1.6,dev:1.3,dev:dev:1.4,dev"]}
   :repositories {"sonatype-oss-public" "https://oss.sonatype.org/content/groups/public/"}

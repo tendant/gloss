@@ -10,7 +10,8 @@
   (:use
     [gloss.core codecs structure protocols]
     [potemkin]
-    [lamina core api])
+    ;[lamina core api]
+    )
   (:require
     [gloss.core.formats :as formats]
     [gloss.data.bytes :as bytes])
@@ -134,63 +135,63 @@
 	    (recur remainder (conj vals x) (rest codecs))
 	    [vals (cons x (rest codecs)) remainder]))))))
 
-(defn decode-channel
-  "Given a channel that emits bytes, returns a channel that emits decoded frames whenever
-   there are sufficient bytes."
-  [src frame]
-  (let [dst (channel)
-	codec (compile-frame frame)]
-    (on-closed dst #(close src))
-    (run-pipeline {:codecs (repeat codec) :bytes nil}
-      {:error-handler (fn [_] (close dst))}
-      (fn [state]
-	(run-pipeline (read-channel* src :on-drained [])
-	  (fn [bytes]
-	    (binding [complete? (drained? src)]
-	      (let [bytes (-> bytes to-buf-seq bytes/dup-bytes)
-		    [s codecs remainder] (when-not (zero? (bytes/byte-count bytes))
-					   (decode-byte-sequence
-					     (:codecs state)
-					     (bytes/concat-bytes (:bytes state) bytes)))]
-		(when-not (empty? s)
-		  (apply enqueue dst s))
-		(when (drained? src)
-		  (close dst))
-		{:codecs codecs :bytes (to-buf-seq remainder)})))))
-      (fn [x]
-	(when-not (drained? src)
-	  (restart x))))
-    (splice dst (grounded-channel))))
+;; (defn decode-channel
+;;   "Given a channel that emits bytes, returns a channel that emits decoded frames whenever
+;;    there are sufficient bytes."
+;;   [src frame]
+;;   (let [dst (channel)
+;; 	codec (compile-frame frame)]
+;;     (on-closed dst #(close src))
+;;     (run-pipeline {:codecs (repeat codec) :bytes nil}
+;;       {:error-handler (fn [_] (close dst))}
+;;       (fn [state]
+;; 	(run-pipeline (read-channel* src :on-drained [])
+;; 	  (fn [bytes]
+;; 	    (binding [complete? (drained? src)]
+;; 	      (let [bytes (-> bytes to-buf-seq bytes/dup-bytes)
+;; 		    [s codecs remainder] (when-not (zero? (bytes/byte-count bytes))
+;; 					   (decode-byte-sequence
+;; 					     (:codecs state)
+;; 					     (bytes/concat-bytes (:bytes state) bytes)))]
+;; 		(when-not (empty? s)
+;; 		  (apply enqueue dst s))
+;; 		(when (drained? src)
+;; 		  (close dst))
+;; 		{:codecs codecs :bytes (to-buf-seq remainder)})))))
+;;       (fn [x]
+;; 	(when-not (drained? src)
+;; 	  (restart x))))
+;;     (splice dst (grounded-channel))))
 
-(defn decode-channel-headers
-  "Given a channel that emits bytes, returns a channel that will emit one decoded frame for
-   each frame passed into the function.  After those frames have been decoded, the channel will
-   simply emit any bytes that are passed into the source channel."
-  [src & frames]
-  (let [dst (channel)]
-    (run-pipeline {:codecs (map compile-frame frames) :bytes nil}
-      (fn [state]
-	(run-pipeline (read-channel* src :on-drained [])
-	  (fn [bytes]
-	    (if (empty? (:codecs state))
-	      state
-	      (binding [complete? (drained? src)]
-		(let [bytes (-> bytes to-buf-seq bytes/dup-bytes)
-		      [vals codecs remainder] (decode-byte-sequence
-						(:codecs state)
-						(bytes/concat-bytes (:bytes state) bytes))]
-		  (when-not (empty? vals)
-		    (apply enqueue dst vals))
-		  {:codecs codecs, :bytes (to-buf-seq remainder)}))))))
-      (fn [state]
-	(cond
-	  (empty? (:codecs state))
-	  (do
-	    (when-let [remainder (:bytes state)]
-	      (enqueue dst remainder))
-	    (siphon src dst)
-	    (on-drained src #(close dst)))
+;; (defn decode-channel-headers
+;;   "Given a channel that emits bytes, returns a channel that will emit one decoded frame for
+;;    each frame passed into the function.  After those frames have been decoded, the channel will
+;;    simply emit any bytes that are passed into the source channel."
+;;   [src & frames]
+;;   (let [dst (channel)]
+;;     (run-pipeline {:codecs (map compile-frame frames) :bytes nil}
+;;       (fn [state]
+;; 	(run-pipeline (read-channel* src :on-drained [])
+;; 	  (fn [bytes]
+;; 	    (if (empty? (:codecs state))
+;; 	      state
+;; 	      (binding [complete? (drained? src)]
+;; 		(let [bytes (-> bytes to-buf-seq bytes/dup-bytes)
+;; 		      [vals codecs remainder] (decode-byte-sequence
+;; 						(:codecs state)
+;; 						(bytes/concat-bytes (:bytes state) bytes))]
+;; 		  (when-not (empty? vals)
+;; 		    (apply enqueue dst vals))
+;; 		  {:codecs codecs, :bytes (to-buf-seq remainder)}))))))
+;;       (fn [state]
+;; 	(cond
+;; 	  (empty? (:codecs state))
+;; 	  (do
+;; 	    (when-let [remainder (:bytes state)]
+;; 	      (enqueue dst remainder))
+;; 	    (siphon src dst)
+;; 	    (on-drained src #(close dst)))
 
-	  (not (drained? src))
-	  (restart state))))
-    (splice dst (closed-channel))))
+;; 	  (not (drained? src))
+;; 	  (restart state))))
+;;     (splice dst (closed-channel))))

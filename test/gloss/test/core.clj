@@ -12,7 +12,7 @@
     [gloss.core.formats :only (to-char-buffer)]
     [gloss.core.protocols :only (write-bytes read-bytes)]
     [gloss.data.bytes :only (take-bytes drop-bytes dup-bytes take-contiguous-bytes buf->string)]
-    [lamina core]
+    ; [lamina core]
     [clojure test walk]))
 
 
@@ -65,18 +65,18 @@
   (let [bytes (-> bytes to-buf-seq dup-bytes)]
     [(take-bytes bytes index) (drop-bytes bytes index)]))
 
-(defn split-channel [split-fn frame val]
-  (apply closed-channel (split-fn (encode-all frame [val val]))))
+;; (defn split-channel [split-fn frame val]
+;;   (apply closed-channel (split-fn (encode-all frame [val val]))))
 
-(defn test-stream-roundtrip [split-fn frame val]
-  (let [ch (decode-channel (split-channel split-fn frame val) frame)]
-    (let [s (convert-result (channel->seq ch))]
-      (is= [val val] s)))
-  (let [ch (decode-channel-headers (split-channel split-fn frame val) frame)
-	v1 (wait-for-message ch)
-	v2 (->> (decode-channel ch frame) channel->seq)]
-    (let [s (convert-result (cons v1 v2))]
-      (is= [val val] s))))
+;; (defn test-stream-roundtrip [split-fn frame val]
+;;   (let [ch (decode-channel (split-channel split-fn frame val) frame)]
+;;     (let [s (convert-result (channel->seq ch))]
+;;       (is= [val val] s)))
+;;   (let [ch (decode-channel-headers (split-channel split-fn frame val) frame)
+;; 	v1 (wait-for-message ch)
+;; 	v2 (->> (decode-channel ch frame) channel->seq)]
+;;     (let [s (convert-result (cons v1 v2))]
+;;       (is= [val val] s))))
 
 (defn test-simple-roundtrip [f val]
   (let [bytes (encode f val)
@@ -95,17 +95,18 @@
         lazy-contiguous-result (lazy-decode-all f bytes)
         lazy-split-result (->> bytes to-buf-seq dup-bytes (partition-bytes 1) (lazy-decode-all f))]
     (is= val val*)
-    (test-stream-roundtrip #(partition-bytes 1 %) f val)
+    ; (test-stream-roundtrip #(partition-bytes 1 %) f val)
     (is= [val val] result)
     (is= [val val] split-result)
     (is= [val val] contiguous-result)
     (is= [val val] lazy-result)
     (is= [val val] lazy-split-result)
     (is= [val val] lazy-contiguous-result)
-    (doseq [i (range 1 (byte-count bytes))]
-      (is= [val val] (decode-all f (apply concat (split-bytes i bytes))))
-      (test-stream-roundtrip #(split-bytes i %) f val)
-      )))
+    ;; (doseq [i (range 1 (byte-count bytes))]
+    ;;   (is= [val val] (decode-all f (apply concat (split-bytes i bytes))))
+    ;;   (test-stream-roundtrip #(split-bytes i %) f val)
+    ;;   )
+    ))
 
 (defn test-full-roundtrip [f buf val]
   (is= val (decode f (-> buf to-buf-seq dup-bytes)))
